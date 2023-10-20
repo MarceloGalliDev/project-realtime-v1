@@ -1,6 +1,7 @@
 {% load static %}
 {% load bootstrap4 %}
 
+
 <!DOCTYPE html>
 <html lang="pt_br">
     <head>
@@ -11,26 +12,47 @@
     </head>
     <body>
         <div class="container">
-            Qual sala de chat você gostaria de entrar? <br>
-            <input id="nome_sala" name="nome_sala" size="100" type="text" placeholder="Nome da sala..."> <br>
+            <textarea name="sala" id="sala" cols="70" rows="15"></textarea><br>
+            <input id="texto" type="text" size="100"><br>
             {% buttons %}
-                <input id="botao" class="btn btn-primary" type="button" value="Entrar">
+                <input id="botao" type="button" value="Enviar">
             {% endbuttons %}
         </div>
+        {% bootstrap_javascript jquery='full' %}
         <script>
-            document.querySelector('#nome_sala').focus();
-            document.querySelector('#nome_sala').onkeyup = function(e) {
-                if(e.keyCode === 13) {
+            var nome_sala = {{ nome_sala_json }};
+
+            var chatSocket = new WebSocket(
+                'ws://' + window.location.host + 
+                '/ws/chat/' + nome_sala + '/'
+            );
+
+            chatSocket.onmessage = function(e) {
+                var dados = JSON.parse(e.data);
+                var mensagem = dados['mensagem'];
+                document.querySelector('#sala').value += (mensagem + '\n');
+            };
+
+            chatSocket.onclose = function(e) {
+                console.error('O chat encerrou de forma inesperada.');
+            };
+
+            document.querySelector('#texto').focus();
+            document.querySelector('#texto').onkeyup = function(e) {
+                if(e.keyCode === 13){
                     document.querySelector('#botao').click();
                 };
             };
+
             document.querySelector('#botao').onclick = function(e) {
-                var nome_sala = document.querySelector('#nome_sala').value;
-                if(nome_sala != "") {
-                    window.location.pathname = '/chat/' + nome_sala + '/';
-                }
-            };
+                var mensagemInput = document.querySelector('#texto');
+                var mensagem = mensagemInput.value;
+                chatSocket.send(JSON.stringify({
+                    'mensagem': mensagem
+                }));
+                mensagemInput.value = '';
+            }
+
         </script>
-        {% bootstrap_javascript jquery='full' %}
     </body>
 </html>
